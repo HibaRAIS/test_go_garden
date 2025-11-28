@@ -1,0 +1,31 @@
+{
+  "name": "co-garden",
+  "version": "1.0.0",
+  "description": "Application collaborative de jardinage avec architecture microservices mesh",
+  "private": true,
+  "workspaces": [
+    "app/frontend",
+    "services/membres",
+    "services/parcelles",
+    "services/taches",
+    "services/catalogue"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:membres\" \"npm run dev:parcelles\" \"npm run dev:taches\" \"npm run dev:catalogue\" \"npm run dev:frontend\"",
+    "dev:membres": "cd services/membres && npm run dev",
+    "dev:parcelles": "cd services/parcelles && npm run dev",
+    "dev:taches": "cd services/taches && npm run dev",
+    "dev:catalogue": "cd services/catalogue && npm run dev",
+    "dev:frontend": "cd app/frontend && npm run dev",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:reset": "docker-compose down -v && docker-compose up -d"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

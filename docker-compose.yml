@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # Base de données pour le service Membres
+  db-membres:
+    image: postgres:15-alpine
+    container_name: cogarden-db-membres
+    environment:
+      POSTGRES_DB: membres_db
+      POSTGRES_USER: cogarden_user
+      POSTGRES_PASSWORD: cogarden_pass
+    ports:
+      - "5436:5432"
+    volumes:
+      - pgdata-membres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cogarden_user -d membres_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de données pour le service Parcelles
+  db-parcelles:
+    image: postgres:15-alpine
+    container_name: cogarden-db-parcelles
+    environment:
+      POSTGRES_DB: parcelles_db
+      POSTGRES_USER: cogarden_user
+      POSTGRES_PASSWORD: cogarden_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata-parcelles:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cogarden_user -d parcelles_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de données pour le service Tâches
+  db-taches:
+    image: postgres:15-alpine
+    container_name: cogarden-db-taches
+    environment:
+      POSTGRES_DB: taches_db
+      POSTGRES_USER: cogarden_user
+      POSTGRES_PASSWORD: cogarden_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-taches:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cogarden_user -d taches_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de données pour le service Catalogue
+  db-catalogue:
+    image: postgres:15-alpine
+    container_name: cogarden-db-catalogue
+    environment:
+      POSTGRES_DB: catalogue_db
+      POSTGRES_USER: cogarden_user
+      POSTGRES_PASSWORD: cogarden_pass
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata-catalogue:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cogarden_user -d catalogue_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata-membres:
+  pgdata-parcelles:
+  pgdata-taches:
+  pgdata-catalogue:
+
+networks:
+  default:
+    name: cogarden-network
