@@ -25,6 +25,23 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_plots_plant ON plots(current_plant_id);
     `);
 
+    // Create assignment_requests table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS assignment_requests (
+        id SERIAL PRIMARY KEY,
+        plot_id UUID REFERENCES plots(id) ON DELETE CASCADE,
+        member_id UUID NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_assignment_requests_status ON assignment_requests(status);
+      CREATE INDEX IF NOT EXISTS idx_assignment_requests_plot ON assignment_requests(plot_id);
+    `);
+
     console.log('✅ Migration terminée avec succès !');
   } catch (error) {
     console.error('❌ Erreur lors de la migration:', error);

@@ -106,7 +106,108 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Plante non trouvée' });
     }
 
+    const plant = result.rows[0];
+
+    // Récupérer les commentaires pour cette plante
+    const commentsResult = await pool.query(
+      'SELECT * FROM comments WHERE plant_id = $1 ORDER BY created_at DESC',
+      [id]
+    );
+
+    plant.comments = commentsResult.rows;
+
+    res.json(plant);
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/plants/{id}:
+ *   put:
+ *     summary: Mettre à jour une plante
+ *     tags: [Plantes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PlantInput'
+ *     responses:
+ *       200:
+ *         description: Plante mise à jour
+ *       404:
+ *         description: Plante non trouvée
+ */
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, scientific_name, description, planting_season } = req.body;
+
+    const result = await pool.query(
+      `UPDATE plants 
+       SET name = COALESCE($1, name),
+           scientific_name = COALESCE($2, scientific_name),
+           description = COALESCE($3, description),
+           planting_season = COALESCE($4, planting_season)
+       WHERE id = $5
+       RETURNING *`,
+      [name, scientific_name, description, planting_season, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Plante non trouvée' });
+    }
+
     res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/plants/{id}:
+ *   delete:
+ *     summary: Supprimer une plante
+ *     tags: [Plantes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Plante supprimée
+ *       404:
+ *         description: Plante non trouvée
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Supprimer d'abord les commentaires associés
+    await pool.query('DELETE FROM comments WHERE plant_id = $1', [id]);
+
+    const result = await pool.query('DELETE FROM plants WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Plante non trouvée' });
+    }
+
+    res.json({ message: 'Plante supprimée avec succès' });
   } catch (error) {
     console.error('Erreur:', error);
     res.status(500).json({ error: 'Erreur serveur' });

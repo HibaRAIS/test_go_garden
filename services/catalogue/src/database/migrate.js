@@ -31,6 +31,8 @@ async function migrate() {
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_comments_plant ON comments(plant_id);
+    `);
+    await client.query(`
       CREATE INDEX IF NOT EXISTS idx_comments_author ON comments(author_id);
     `);
 

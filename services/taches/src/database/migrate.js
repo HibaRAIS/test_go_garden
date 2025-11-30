@@ -14,10 +14,25 @@ async function migrate() {
         title TEXT NOT NULL,
         description TEXT,
         due_date TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'pending',
+        type VARCHAR(20) DEFAULT 'other',
         plot_id UUID,
         plant_id UUID,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Add missing columns if they don't exist
+    await client.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tasks' AND column_name='status') THEN
+          ALTER TABLE tasks ADD COLUMN status VARCHAR(20) DEFAULT 'pending';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tasks' AND column_name='type') THEN
+          ALTER TABLE tasks ADD COLUMN type VARCHAR(20) DEFAULT 'other';
+        END IF;
+      END $$;
     `);
 
     await client.query(`

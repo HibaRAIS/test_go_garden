@@ -34,11 +34,11 @@ const router = express.Router();
  */
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { first_name, last_name, email, password, phone, skills, role } = req.body;
 
     // Validation
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Tous les champs sont requis' });
+    if (!first_name || !last_name || !email || !password) {
+      return res.status(400).json({ error: 'Tous les champs obligatoires sont requis' });
     }
 
     if (password.length < 6) {
@@ -58,22 +58,37 @@ router.post('/register', async (req, res) => {
     // Hasher le mot de passe
     const password_hash = await bcrypt.hash(password, 10);
 
+    const name = `${first_name} ${last_name}`.trim();
+    const is_admin = role === 'admin';
+
     // Créer l'utilisateur
     const result = await pool.query(
-      'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email, created_at',
-      [name, email, password_hash]
+      'INSERT INTO users (name, email, password_hash, is_admin, phone, skills) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, email, is_admin, phone, skills, created_at',
+      [name, email, password_hash, is_admin, phone, skills]
     );
 
     const user = result.rows[0];
 
     // Générer le token JWT
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, role: is_admin ? 'admin' : 'membre' },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
-    res.status(201).json({ token, user });
+    // Formater la réponse pour le frontend
+    const member = {
+      id: user.id,
+      first_name: first_name,
+      last_name: last_name,
+      email: user.email,
+      role: user.is_admin ? 'admin' : 'membre',
+      phone: user.phone,
+      skills: user.skills,
+      join_date: user.created_at
+    };
+
+    res.status(201).json({ token, member });
   } catch (error) {
     console.error('Erreur lors de l\'inscription:', error);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -117,7 +132,7 @@ router.post('/login', async (req, res) => {
 
     // Trouver l'utilisateur
     const result = await pool.query(
-      'SELECT id, name, email, password_hash, created_at FROM users WHERE email = $1',
+      'SELECT id, name, email, password_hash, is_admin, phone, skills, created_at FROM users WHERE email = $1',
       [email]
     );
 
@@ -136,15 +151,28 @@ router.post('/login', async (req, res) => {
 
     // Générer le token JWT
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, role: user.is_admin ? 'admin' : 'membre' },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
-    // Retourner sans le password_hash
-    const { password_hash, ...userWithoutPassword } = user;
+    // Formater la réponse pour le frontend
+    const nameParts = user.name.split(' ');
+    const first_name = nameParts[0] || '';
+    const last_name = nameParts.slice(1).join(' ') || '';
 
-    res.json({ token, user: userWithoutPassword });
+    const member = {
+      id: user.id,
+      first_name: first_name,
+      last_name: last_name,
+      email: user.email,
+      role: user.is_admin ? 'admin' : 'membre',
+      phone: user.phone,
+      skills: user.skills,
+      join_date: user.created_at
+    };
+
+    res.json({ token, member });
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
     res.status(500).json({ error: 'Erreur serveur' });

@@ -172,4 +172,109 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/tasks/{id}:
+ *   put:
+ *     summary: Mettre à jour une tâche
+ *     tags: [Tâches]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/TaskInput'
+ *     responses:
+ *       200:
+ *         description: Tâche mise à jour
+ *       404:
+ *         description: Tâche non trouvée
+ */
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, due_date, status, type, plot_id, plant_id } = req.body;
+
+    const result = await pool.query(
+      `UPDATE tasks 
+       SET title = COALESCE($1, title),
+           description = COALESCE($2, description),
+           due_date = COALESCE($3, due_date),
+           status = COALESCE($4, status),
+           type = COALESCE($5, type),
+           plot_id = COALESCE($6, plot_id),
+           plant_id = COALESCE($7, plant_id),
+           updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [title, description, due_date, status, type, plot_id, plant_id, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Tâche non trouvée' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/tasks/{id}:
+ *   delete:
+ *     summary: Supprimer une tâche
+ *     tags: [Tâches]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Tâche supprimée
+ *       404:
+ *         description: Tâche non trouvée
+ */
+router.delete('/:id', async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { id } = req.params;
+    
+    await client.query('BEGIN');
+    
+    // Supprimer d'abord les assignations
+    await client.query('DELETE FROM task_assignments WHERE task_id = $1', [id]);
+    
+    // Supprimer la tâche
+    const result = await client.query('DELETE FROM tasks WHERE id = $1 RETURNING *', [id]);
+    
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Tâche non trouvée' });
+    }
+    
+    await client.query('COMMIT');
+    res.json({ message: 'Tâche supprimée avec succès' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Erreur:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
