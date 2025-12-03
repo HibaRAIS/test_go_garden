@@ -210,8 +210,7 @@ router.put('/:id', async (req, res) => {
            status = COALESCE($4, status),
            type = COALESCE($5, type),
            plot_id = COALESCE($6, plot_id),
-           plant_id = COALESCE($7, plant_id),
-           updated_at = NOW()
+           plant_id = COALESCE($7, plant_id)
        WHERE id = $8
        RETURNING *`,
       [title, description, due_date, status, type, plot_id, plant_id, id]

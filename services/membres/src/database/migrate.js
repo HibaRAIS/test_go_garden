@@ -11,20 +11,29 @@ async function migrate() {
       CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
     `);
 
-    // Table users
+    // Table users (membres)
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
+        phone TEXT,
+        skills TEXT,
+        is_admin BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
+    // Ajouter les colonnes si elles n'existent pas (pour les anciennes installations)
     await client.query(`
-      ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+    `);
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS skills TEXT;
+    `);
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false;
     `);
 
     // Index pour améliorer les performances

@@ -10,7 +10,12 @@ export function ProtectedRoute({
   children,
   requiredRole,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
+
+  // Wait for auth state to be loaded from localStorage
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Chargement...</div>;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;

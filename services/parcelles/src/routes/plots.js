@@ -69,6 +69,24 @@ router.get('/', async (req, res) => {
 
     const result = await pool.query(query, params);
     
+    // Fetch member names for all plots with member_id
+    const memberIds = [...new Set(result.rows.filter(p => p.member_id).map(p => p.member_id))];
+    let memberNames = {};
+    
+    if (memberIds.length > 0) {
+      try {
+        const membersServiceUrl = process.env.SERVICE_MEMBRES_URL || 'http://service-membres:8001';
+        const membersResponse = await axios.get(`${membersServiceUrl}/api/members`);
+        if (membersResponse.data) {
+          membersResponse.data.forEach(m => {
+            memberNames[m.id] = `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email;
+          });
+        }
+      } catch (err) {
+        console.log('Could not fetch member names:', err.message);
+      }
+    }
+    
     // Transformer les données pour correspondre au format frontend
     const plots = result.rows.map(plot => ({
       id: plot.id,
@@ -76,10 +94,10 @@ router.get('/', async (req, res) => {
       surface: plot.size_sqm || 0,
       soil_type: plot.location_ref || '',
       status: plot.member_id ? 'occupied' : 'available',
-      occupant: plot.member_id || null,
+      occupant: plot.member_id ? (memberNames[plot.member_id] || plot.member_id) : null,
       occupantid: plot.member_id || null,
       current_plant: plot.current_plant_id || null,
-      image: null,
+      image: plot.image || null,
       created_at: plot.created_at
     }));
     
@@ -90,12 +108,20 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', upload.none(), async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   try {
     // Accept both frontend field names and backend field names
     const name = req.body.name;
     const location_ref = req.body.location_ref || req.body.soil_type || null;
     const size_sqm = req.body.size_sqm || req.body.surface || null;
+    
+    // Handle image - could be a file upload or URL string
+    let image_url = req.body.image || null;
+    if (req.file) {
+      // For now, we'll skip file storage - just use URL if provided
+      // In production, you'd upload to cloud storage here
+      console.log('File received but not stored (no storage configured)');
+    }
     
     // Handle empty strings as null for UUID fields
     let current_plant_id = req.body.current_plant_id || req.body.current_plant;
@@ -113,8 +139,8 @@ router.post('/', upload.none(), async (req, res) => {
     }
 
     const result = await pool.query(
-      'INSERT INTO plots (name, location_ref, size_sqm, current_plant_id, member_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [name, location_ref, size_sqm, current_plant_id, member_id]
+      'INSERT INTO plots (name, location_ref, size_sqm, current_plant_id, member_id, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [name, location_ref, size_sqm, current_plant_id, member_id, image_url]
     );
 
     res.status(201).json(result.rows[0]);
@@ -496,6 +522,7 @@ router.put('/:id', upload.none(), async (req, res) => {
     const name = req.body.name;
     const location_ref = req.body.location_ref || req.body.soil_type;
     const size_sqm = req.body.size_sqm || req.body.surface;
+    const image = req.body.image || null;
     
     // Handle empty strings as null for UUID fields
     let current_plant_id = req.body.current_plant_id || req.body.current_plant;
@@ -514,10 +541,11 @@ router.put('/:id', upload.none(), async (req, res) => {
            location_ref = COALESCE($2, location_ref),
            size_sqm = COALESCE($3, size_sqm),
            current_plant_id = $4,
-           member_id = $5
-       WHERE id = $6
+           member_id = $5,
+           image = COALESCE($6, image)
+       WHERE id = $7
        RETURNING *`,
-      [name, location_ref, size_sqm, current_plant_id, member_id, id]
+      [name, location_ref, size_sqm, current_plant_id, member_id, image, id]
     );
 
     if (result.rows.length === 0) {

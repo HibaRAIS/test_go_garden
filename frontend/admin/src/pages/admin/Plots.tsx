@@ -36,10 +36,6 @@ export function Plots() {
     surface: "",
     soil_type: "",
     image: "",
-    current_plant: "",
-    plant_emoji: "",
-    occupant: "",
-    occupantid: "", // champ pour l'ID
     status: "available",
     _file: undefined as File | undefined,
   });
@@ -178,10 +174,6 @@ export function Plots() {
       surface: "",
       soil_type: "",
       image: "",
-      current_plant: "",
-      plant_emoji: "",
-      occupant: "",
-      occupantid: "",
       status: "available",
       _file: undefined,
     });
@@ -281,10 +273,6 @@ export function Plots() {
                     surface: String(plotToEdit.surface ?? ""),
                     soil_type: plotToEdit.soil_type ?? "",
                     image: typeof plotToEdit.image === "string" ? plotToEdit.image : "",
-                    current_plant: plotToEdit.current_plant ?? "",
-                    plant_emoji: plotToEdit.plant_emoji ?? "",
-                    occupant: plotToEdit.occupant ?? "",
-                    occupantid: String(plotToEdit.occupantid ?? ""), // Assurez-vous que la prop s'appelle bien `occupantid`
                     status: plotToEdit.status ?? "available",
                     _file: undefined,
                   });
@@ -447,63 +435,6 @@ export function Plots() {
                 </div>
               )}
             </div>
-
-            {/* Culture + Emoji */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-gray-600">Culture</label>
-                <select
-                  value={newPlot.current_plant}
-                  onChange={(e) => setNewPlot({ ...newPlot, current_plant: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#4CAF50] outline-none"
-                >
-                  <option value="">-- Choisir une plante --</option>
-                  {plants.map((plant) => (
-                    <option key={plant.id} value={plant.name}>
-                      {plant.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Emoji</label>
-                <Input
-                  placeholder="🌻"
-                  value={newPlot.plant_emoji}
-                  onChange={(e) => setNewPlot({ ...newPlot, plant_emoji: e.target.value })}
-                  className="rounded-lg text-center text-lg"
-                />
-              </div>
-            </div>
-
-            {/* Occupant */}
-            <div>
-              <label className="text-xs font-medium text-gray-600">Occupant</label>
-              <select
-                value={newPlot.occupantid}
-                onChange={(e) => {
-                  const selectedId = e.target.value;
-                  const member = occupants.find(o => o.id === Number(selectedId));
-                  const memberName = member ? `${member.first_name} ${member.last_name}` : "";
-
-                  setNewPlot({
-                    ...newPlot,
-                    occupantid: selectedId, // On met à jour l'ID
-                    occupant: memberName,   // On met à jour le nom
-                    status: selectedId ? "occupied" : "available",
-                  });
-                }}
-                className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#4CAF50] outline-none"
-              >
-                <option value="">-- Aucun (disponible) --</option>
-                {occupants.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.first_name} {o.last_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
 
             {/* 🪄 Bouton Ajouter / Modifier */}
             <Button

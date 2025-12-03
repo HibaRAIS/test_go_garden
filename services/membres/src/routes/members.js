@@ -73,9 +73,9 @@ router.get('/', async (req, res) => {
     const { ids } = req.query;
 
     if (!ids) {
-      // Si pas d'IDs, retourner tous les membres
+      // Si pas d'IDs, retourner uniquement les membres (pas les admins)
       const result = await pool.query(
-        'SELECT id, name, email, is_admin, phone, skills, created_at FROM users ORDER BY created_at DESC'
+        'SELECT id, name, email, is_admin, phone, skills, created_at FROM users WHERE is_admin = false ORDER BY created_at DESC'
       );
       return res.json(result.rows);
     }

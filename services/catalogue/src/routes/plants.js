@@ -51,7 +51,12 @@ router.get('/', async (req, res) => {
     query += ' ORDER BY name ASC';
 
     const result = await pool.query(query, params);
-    res.json(result.rows);
+    // Map image to image_url for frontend compatibility
+    const plants = result.rows.map(plant => ({
+      ...plant,
+      image_url: plant.image || null
+    }));
+    res.json(plants);
   } catch (error) {
     console.error('Erreur:', error);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -60,15 +65,17 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, scientific_name, description, planting_season } = req.body;
+    const { name, scientific_name, description, planting_season, image, image_url } = req.body;
+    // Accept both 'image' and 'image_url' field names
+    const imageValue = image || image_url || null;
 
     if (!name) {
       return res.status(400).json({ error: 'Nom requis' });
     }
 
     const result = await pool.query(
-      'INSERT INTO plants (name, scientific_name, description, planting_season) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, scientific_name, description, planting_season]
+      'INSERT INTO plants (name, scientific_name, description, planting_season, image) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [name, scientific_name, description, planting_season, imageValue]
     );
 
     res.status(201).json(result.rows[0]);
@@ -115,6 +122,8 @@ router.get('/:id', async (req, res) => {
     );
 
     plant.comments = commentsResult.rows;
+    // Add image_url for frontend compatibility
+    plant.image_url = plant.image || null;
 
     res.json(plant);
   } catch (error) {
@@ -151,17 +160,20 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, scientific_name, description, planting_season } = req.body;
+    const { name, scientific_name, description, planting_season, image, image_url } = req.body;
+    // Accept both 'image' and 'image_url' field names
+    const imageValue = image || image_url || null;
 
     const result = await pool.query(
       `UPDATE plants 
        SET name = COALESCE($1, name),
            scientific_name = COALESCE($2, scientific_name),
            description = COALESCE($3, description),
-           planting_season = COALESCE($4, planting_season)
-       WHERE id = $5
+           planting_season = COALESCE($4, planting_season),
+           image = COALESCE($5, image)
+       WHERE id = $6
        RETURNING *`,
-      [name, scientific_name, description, planting_season, id]
+      [name, scientific_name, description, planting_season, imageValue, id]
     );
 
     if (result.rows.length === 0) {

@@ -10,6 +10,7 @@ import {
   MapPin,
   CheckSquare,
   ArrowRight,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -26,14 +27,27 @@ import { Link } from "react-router-dom";
 // API URLs
 const PLOTS_API_URL = import.meta.env.VITE_PARCELLES_API_URL || "http://localhost:8002/api";
 const TASKS_API_URL = import.meta.env.VITE_TACHES_API_URL || "http://localhost:8003/api";
+const CATALOGUE_API_URL = import.meta.env.VITE_CATALOGUE_API_URL || "http://localhost:8004/api";
+
+interface Comment {
+  id: string;
+  text: string;
+  plant_id: string;
+  plant_name?: string;
+  author_id: string;
+  created_at: string;
+}
 
 interface Plot {
   id: string;
   name: string;
   location_ref?: string;
   size_sqm?: number;
+  surface?: number;
   current_plant_id?: string;
   member_id?: string;
+  occupantid?: string;
+  image?: string;
 }
 
 interface Task {
@@ -52,6 +66,7 @@ export function Profile() {
   const [userData, setUserData] = useState<Member | null>(null);
   const [userPlots, setUserPlots] = useState<Plot[]>([]);
   const [userTasks, setUserTasks] = useState<Task[]>([]);
+  const [userComments, setUserComments] = useState<Comment[]>([]);
 
   useEffect(() => {
     loadUserProfile();
@@ -71,34 +86,55 @@ export function Profile() {
 
   async function loadUserData() {
     try {
+      const savedUser = localStorage.getItem("user");
+      if (!savedUser) return;
+      
+      const currentUser = JSON.parse(savedUser);
+      
       // Load plots assigned to current user
       const plotsResponse = await fetch(`${PLOTS_API_URL}/plots`);
       if (plotsResponse.ok) {
         const allPlots = await plotsResponse.json();
-        // Filter plots by member_id if user is logged in
-        const savedUser = localStorage.getItem("user");
-        if (savedUser) {
-          const currentUser = JSON.parse(savedUser);
-          const myPlots = allPlots.filter((p: Plot) => p.member_id === currentUser.id);
-          setUserPlots(myPlots);
-        }
+        // Check both member_id and occupantid for compatibility
+        const myPlots = allPlots.filter((p: Plot) => 
+          p.member_id === currentUser.id || p.occupantid === currentUser.id
+        );
+        setUserPlots(myPlots);
       }
 
       // Load tasks assigned to current user
-      const savedUser = localStorage.getItem("user");
-      if (savedUser) {
-        const currentUser = JSON.parse(savedUser);
-        const tasksResponse = await fetch(`${TASKS_API_URL}/tasks?assigned_to=${currentUser.id}`);
-        if (tasksResponse.ok) {
-          const tasks = await tasksResponse.json();
-          setUserTasks(tasks);
+      const tasksResponse = await fetch(`${TASKS_API_URL}/tasks?assigned_to=${currentUser.id}`);
+      if (tasksResponse.ok) {
+        const tasks = await tasksResponse.json();
+        setUserTasks(tasks);
+      } else {
+        // If filter doesn't work, get all tasks
+        const allTasksResponse = await fetch(`${TASKS_API_URL}/tasks`);
+        if (allTasksResponse.ok) {
+          const allTasks = await allTasksResponse.json();
+          setUserTasks(allTasks.slice(0, 5)); // Show first 5 tasks
+        }
+      }
+      
+      // Load user's comments
+      const commentsResponse = await fetch(`${CATALOGUE_API_URL}/comments?author_id=${currentUser.id}`);
+      if (commentsResponse.ok) {
+        const comments = await commentsResponse.json();
+        // Fetch plant names for comments
+        const plantsResponse = await fetch(`${CATALOGUE_API_URL}/plants`);
+        if (plantsResponse.ok) {
+          const plants = await plantsResponse.json();
+          const plantMap: { [key: string]: string } = {};
+          plants.forEach((p: { id: string; name: string }) => {
+            plantMap[p.id] = p.name;
+          });
+          const commentsWithPlantNames = comments.map((c: Comment) => ({
+            ...c,
+            plant_name: plantMap[c.plant_id] || 'Plante inconnue'
+          }));
+          setUserComments(commentsWithPlantNames);
         } else {
-          // If filter doesn't work, get all tasks
-          const allTasksResponse = await fetch(`${TASKS_API_URL}/tasks`);
-          if (allTasksResponse.ok) {
-            const allTasks = await allTasksResponse.json();
-            setUserTasks(allTasks.slice(0, 5)); // Show first 5 tasks
-          }
+          setUserComments(comments);
         }
       }
     } catch (error) {
@@ -269,24 +305,59 @@ export function Profile() {
           </div>
         </div>
 
-        {/* Mes Commentaires - lien vers la galerie */}
+        {/* Mes Commentaires */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">
-            Commentaires
-          </h3>
-
-          <div className="text-center py-6">
-            <p className="text-sm text-gray-600 mb-4">
-              Consultez et ajoutez des commentaires sur les plantes dans la galerie.
-            </p>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                <MessageCircle className="text-purple-600" size={20} />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Mes Commentaires
+              </h3>
+            </div>
             <Link
               to="/member/gallery"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#4CAF50] text-white rounded-lg hover:bg-[#2E7D32] transition-colors"
+              className="flex items-center gap-1 text-[#4CAF50] hover:text-[#2E7D32] transition-colors"
             >
-              <span>Voir la galerie</span>
+              <span className="text-sm">Voir la galerie</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
+
+          {userComments.length > 0 ? (
+            <div className="space-y-3">
+              {userComments.slice(0, 5).map((comment) => (
+                <div
+                  key={comment.id}
+                  className="border border-gray-200 rounded-xl p-4 hover:border-purple-300 transition-all"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-sm font-medium text-purple-600">
+                      {comment.plant_name}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(comment.created_at).toLocaleDateString('fr-FR')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700">{comment.text}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-sm text-gray-600 mb-4">
+                Vous n'avez pas encore laissé de commentaires.
+              </p>
+              <Link
+                to="/member/gallery"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#4CAF50] text-white rounded-lg hover:bg-[#2E7D32] transition-colors"
+              >
+                <span>Découvrir les plantes</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -320,17 +391,17 @@ export function Profile() {
                   <h4 className="font-semibold text-gray-900">{plot.name}</h4>
                   <span
                     className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                      plot.member_id
+                      plot.member_id || plot.occupantid
                         ? "bg-[#4CAF50]/10 text-[#4CAF50]"
                         : "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {plot.member_id ? "Occupée" : "Libre"}
+                    {plot.member_id || plot.occupantid ? "Occupée" : "Libre"}
                   </span>
                 </div>
 
                 <div className="text-xs text-gray-500 space-y-1">
-                  {plot.size_sqm && <p>Surface: {plot.size_sqm} m²</p>}
+                  {(plot.size_sqm || plot.surface) && <p>Surface: {plot.size_sqm || plot.surface} m²</p>}
                   {plot.location_ref && <p>Sol: {plot.location_ref}</p>}
                 </div>
               </div>

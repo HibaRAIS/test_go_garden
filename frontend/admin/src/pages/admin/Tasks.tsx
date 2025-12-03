@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, User } from "lucide-react";
+import { Plus, User, Droplet, Scissors, ShoppingBasket, Sprout, MoreHorizontal } from "lucide-react";
 import { TaskCard } from "../../components/TaskCard";
 import { tasksApi, Task, Member } from "../../services/tasksApi";
 import { Button } from "../../components/ui/button";
@@ -311,6 +311,43 @@ export function Tasks() {
           >
             Ouvrir le calendrier
           </Button>
+        </div>
+      </div>
+
+      {/* Légende des types de tâches */}
+      <div className="bg-white rounded-xl p-4 border border-[#E0E0E0]">
+        <h4 className="text-gray-900 font-medium mb-3">Légende</h4>
+        <div className="flex flex-wrap gap-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-blue-100">
+              <Droplet className="h-4 w-4 text-blue-500" />
+            </div>
+            <span className="text-sm text-gray-600">Arrosage</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-yellow-100">
+              <Scissors className="h-4 w-4 text-yellow-600" />
+            </div>
+            <span className="text-sm text-gray-600">Désherbage</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-orange-100">
+              <ShoppingBasket className="h-4 w-4 text-orange-500" />
+            </div>
+            <span className="text-sm text-gray-600">Récolte</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-green-100">
+              <Sprout className="h-4 w-4 text-green-500" />
+            </div>
+            <span className="text-sm text-gray-600">Plantation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-purple-100">
+              <MoreHorizontal className="h-4 w-4 text-purple-500" />
+            </div>
+            <span className="text-sm text-gray-600">Autre</span>
+          </div>
         </div>
       </div>
     </div>
