@@ -99,7 +99,7 @@ router.post('/', async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const { title, description, due_date, plot_id, plant_id, assigned_to } = req.body;
+    const { title, description, due_date, status, type, plot_id, plant_id, assigned_to } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Titre requis' });
@@ -107,10 +107,10 @@ router.post('/', async (req, res) => {
 
     await client.query('BEGIN');
 
-    // Créer la tâche
+    // Créer la tâche avec status et type
     const taskResult = await client.query(
-      'INSERT INTO tasks (title, description, due_date, plot_id, plant_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [title, description, due_date, plot_id, plant_id]
+      'INSERT INTO tasks (title, description, due_date, status, type, plot_id, plant_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [title, description, due_date, status || 'pending', type || 'other', plot_id, plant_id]
     );
 
     const task = taskResult.rows[0];
