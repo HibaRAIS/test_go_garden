@@ -4,38 +4,48 @@ const bcrypt = require('bcryptjs');
 async function seed() {
   const client = await pool.connect();
 
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@cogarden.local';
-  const adminName = process.env.ADMIN_NAME || 'Administrateur Co-Garden';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
+  // Default users to create
+  const defaultUsers = [
+    {
+      email: 'admin@cogarden.com',
+      password: 'admin123',
+      firstName: 'Admin',
+      lastName: 'CoGarden',
+      isAdmin: true
+    },
+    {
+      email: 'membre@cogarden.com',
+      password: 'membre123',
+      firstName: 'Membre',
+      lastName: 'Test',
+      isAdmin: false
+    }
+  ];
 
   try {
-    console.log('🌱 Vérification des données initiales membres...');
+    console.log('🌱 Vérification des utilisateurs par défaut...');
 
-    const existingAdmin = await client.query(
-      'SELECT id, is_admin FROM users WHERE email = $1',
-      [adminEmail]
-    );
-
-    if (existingAdmin.rows.length === 0) {
-      const passwordHash = await bcrypt.hash(adminPassword, 10);
-
-      const result = await client.query(
-        'INSERT INTO users (name, email, password_hash, is_admin) VALUES ($1, $2, $3, true) RETURNING id',
-        [adminName, adminEmail, passwordHash]
+    for (const user of defaultUsers) {
+      const existing = await client.query(
+        'SELECT id FROM members WHERE email = $1',
+        [user.email]
       );
 
-      console.log(`⭐ Utilisateur administrateur créé (id: ${result.rows[0].id})`);
-      console.log(`   Email : ${adminEmail}`);
-      console.log('   Mot de passe : (défini dans ADMIN_PASSWORD, pensez à le modifier en production)');
-    } else if (!existingAdmin.rows[0].is_admin) {
-      await client.query(
-        'UPDATE users SET is_admin = true WHERE id = $1',
-        [existingAdmin.rows[0].id]
-      );
-      console.log('✅ Utilisateur administrateur existant mis à jour avec le rôle admin.');
-    } else {
-      console.log('✅ Un utilisateur administrateur existe déjà, aucune action nécessaire.');
+      if (existing.rows.length === 0) {
+        const passwordHash = await bcrypt.hash(user.password, 10);
+
+        const result = await client.query(
+          'INSERT INTO members (email, password_hash, first_name, last_name, is_admin) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+          [user.email, passwordHash, user.firstName, user.lastName, user.isAdmin]
+        );
+
+        console.log(`✅ Utilisateur créé: ${user.email} (${user.isAdmin ? 'admin' : 'membre'})`);
+      } else {
+        console.log(`ℹ️  Utilisateur existant: ${user.email}`);
+      }
     }
+
+    console.log('✅ Seed terminé avec succès !');
   } catch (error) {
     console.error('❌ Erreur lors du seeding de la base membres:', error);
     throw error;

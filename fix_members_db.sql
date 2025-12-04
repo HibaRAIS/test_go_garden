@@ -19,7 +19,7 @@ CREATE INDEX idx_members_email ON members(email);
 
 -- Admin de test (mot de passe: admin123)
 INSERT INTO members (email, password_hash, first_name, last_name, is_admin) 
-VALUES ('admin@cogarden.com', '$2b$10$8K1p/a0dL1LXMIgoEDFrwOfMQHLVt5I.qYVqV7C9wVxqJVJzq8FKe', 'Admin', 'Test', true);
+VALUES ('admin@cogarden.com', '$2b$10$8K1p/a0dL1LXMIgoEDFrwOfMQHLVt5I.qYVqV7C9wVxqJVJzq8FKe', 'Admin', 'Admin', true);
 
 -- Membre de test (mot de passe: membre123)
 INSERT INTO members (email, password_hash, first_name, last_name, is_admin) 
