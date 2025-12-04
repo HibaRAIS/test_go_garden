@@ -33,20 +33,29 @@ export const tasksApi = {
     }));
   },
 
-  create: async (task: Partial<Task>) => {
+  create: async (task: Partial<Task> & { due_date?: string; assigned_to?: string[] }) => {
     const response = await fetch(`${API_BASE_URL}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: task.title,
         description: task.description,
-        due_date: task.date,
+        due_date: task.due_date || task.date,
         status: task.status,
-        type: task.type
+        type: task.type,
+        assigned_to: task.assigned_to
       }),
     });
     if (!response.ok) throw new Error("Failed to create task");
-    return response.json();
+    const created = await response.json();
+    return {
+      id: created.id,
+      title: created.title,
+      description: created.description,
+      date: created.due_date,
+      status: created.status || 'pending',
+      type: created.type || 'other'
+    };
   },
 
   update: async (id: string, updates: Partial<Task>) => {

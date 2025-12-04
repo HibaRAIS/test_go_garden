@@ -47,7 +47,7 @@ router.post('/register', async (req, res) => {
 
     // Vérifier si l'email existe déjà
     const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
+      'SELECT id FROM members WHERE email = $1',
       [email]
     );
 
@@ -58,13 +58,12 @@ router.post('/register', async (req, res) => {
     // Hasher le mot de passe
     const password_hash = await bcrypt.hash(password, 10);
 
-    const name = `${first_name} ${last_name}`.trim();
     const is_admin = role === 'admin';
 
     // Créer l'utilisateur
     const result = await pool.query(
-      'INSERT INTO users (name, email, password_hash, is_admin, phone, skills) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, email, is_admin, phone, skills, created_at',
-      [name, email, password_hash, is_admin, phone, skills]
+      'INSERT INTO members (first_name, last_name, email, password_hash, is_admin, phone, skills) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, first_name, last_name, email, is_admin, phone, skills, created_at',
+      [first_name, last_name, email, password_hash, is_admin, phone, skills]
     );
 
     const user = result.rows[0];
@@ -132,7 +131,7 @@ router.post('/login', async (req, res) => {
 
     // Trouver l'utilisateur
     const result = await pool.query(
-      'SELECT id, name, email, password_hash, is_admin, phone, skills, created_at FROM users WHERE email = $1',
+      'SELECT id, first_name, last_name, email, password_hash, is_admin, phone, skills, created_at FROM members WHERE email = $1',
       [email]
     );
 
@@ -157,14 +156,10 @@ router.post('/login', async (req, res) => {
     );
 
     // Formater la réponse pour le frontend
-    const nameParts = user.name.split(' ');
-    const first_name = nameParts[0] || '';
-    const last_name = nameParts.slice(1).join(' ') || '';
-
     const member = {
       id: user.id,
-      first_name: first_name,
-      last_name: last_name,
+      first_name: user.first_name,
+      last_name: user.last_name,
       email: user.email,
       role: user.is_admin ? 'admin' : 'membre',
       phone: user.phone,

@@ -319,33 +319,23 @@ export function Tasks() {
         <h4 className="text-gray-900 font-medium mb-3">Légende</h4>
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-100">
-              <Droplet className="h-4 w-4 text-blue-500" />
-            </div>
+            <div className="h-4 w-4 rounded bg-blue-500" />
             <span className="text-sm text-gray-600">Arrosage</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-yellow-100">
-              <Scissors className="h-4 w-4 text-yellow-600" />
-            </div>
+            <div className="h-4 w-4 rounded bg-yellow-500" />
             <span className="text-sm text-gray-600">Désherbage</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-orange-100">
-              <ShoppingBasket className="h-4 w-4 text-orange-500" />
-            </div>
+            <div className="h-4 w-4 rounded bg-orange-500" />
             <span className="text-sm text-gray-600">Récolte</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-green-100">
-              <Sprout className="h-4 w-4 text-green-500" />
-            </div>
+            <div className="h-4 w-4 rounded bg-green-500" />
             <span className="text-sm text-gray-600">Plantation</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-purple-100">
-              <MoreHorizontal className="h-4 w-4 text-purple-500" />
-            </div>
+            <div className="h-4 w-4 rounded bg-purple-500" />
             <span className="text-sm text-gray-600">Autre</span>
           </div>
         </div>

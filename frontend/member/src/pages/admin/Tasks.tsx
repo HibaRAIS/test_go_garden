@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Filter, Droplet, Scissors, ShoppingBasket, Sprout, MoreHorizontal } from "lucide-react";
 import { TaskCard } from "../../components/TaskCard";
 import { tasksApi, Task } from "../../services/tasksApi";
+import { apiService } from "../../services/membreApi";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -25,16 +26,41 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 
+interface Member {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
 export function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [newTask, setNewTask] = useState({ title: "", description: "", due_date: "", type: "other", status: "pending" });
+  const [newTask, setNewTask] = useState({ 
+    title: "", 
+    description: "", 
+    due_date: "", 
+    type: "other", 
+    status: "pending",
+    assigned_to: [] as string[]
+  });
 
   useEffect(() => {
     loadTasks();
+    loadMembers();
   }, []);
+
+  const loadMembers = async () => {
+    try {
+      const data = await apiService.getAllMembers();
+      setMembers(data.members || []);
+    } catch (err) {
+      console.error("Failed to load members", err);
+    }
+  };
 
   const loadTasks = async () => {
     try {
@@ -50,13 +76,32 @@ export function Tasks() {
 
   const handleAddTask = async () => {
     try {
-      const created = await tasksApi.create(newTask);
+      const created = await tasksApi.create({
+        ...newTask,
+        assigned_to: newTask.assigned_to
+      });
       setTasks([...tasks, created]);
       setIsAddOpen(false);
-      setNewTask({ title: "", description: "", due_date: "", type: "other", status: "pending" });
+      setNewTask({ 
+        title: "", 
+        description: "", 
+        due_date: "", 
+        type: "other", 
+        status: "pending",
+        assigned_to: []
+      });
     } catch (err) {
       console.error("Failed to create task", err);
     }
+  };
+
+  const toggleMemberSelection = (memberId: string) => {
+    setNewTask(prev => ({
+      ...prev,
+      assigned_to: prev.assigned_to.includes(memberId)
+        ? prev.assigned_to.filter(id => id !== memberId)
+        : [...prev.assigned_to, memberId]
+    }));
   };
 
   const handleStatusChange = async (taskId: string, newStatus: Task["status"]) => {
@@ -202,33 +247,23 @@ export function Tasks() {
         <h4 className="text-gray-900 font-medium mb-3">Légende</h4>
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-100">
-              <Droplet className="h-4 w-4 text-blue-500" />
-            </div>
+            <div className="h-4 w-4 rounded bg-blue-500" />
             <span className="text-sm text-gray-600">Arrosage</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-yellow-100">
-              <Scissors className="h-4 w-4 text-yellow-600" />
-            </div>
+            <div className="h-4 w-4 rounded bg-yellow-500" />
             <span className="text-sm text-gray-600">Désherbage</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-orange-100">
-              <ShoppingBasket className="h-4 w-4 text-orange-500" />
-            </div>
+            <div className="h-4 w-4 rounded bg-orange-500" />
             <span className="text-sm text-gray-600">Récolte</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-green-100">
-              <Sprout className="h-4 w-4 text-green-500" />
-            </div>
+            <div className="h-4 w-4 rounded bg-green-500" />
             <span className="text-sm text-gray-600">Plantation</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-purple-100">
-              <MoreHorizontal className="h-4 w-4 text-purple-500" />
-            </div>
+            <div className="h-4 w-4 rounded bg-purple-500" />
             <span className="text-sm text-gray-600">Autre</span>
           </div>
         </div>
@@ -279,6 +314,37 @@ export function Tasks() {
                   <SelectItem value="other">Autre</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label>Assigner à des membres</Label>
+              <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                {members.length === 0 ? (
+                  <p className="text-sm text-gray-500 p-2">Aucun membre disponible</p>
+                ) : (
+                  members.map((member) => (
+                    <label
+                      key={member.id}
+                      className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newTask.assigned_to.includes(member.id)}
+                        onChange={() => toggleMemberSelection(member.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      />
+                      <span className="text-sm text-gray-700">
+                        {member.first_name} {member.last_name}
+                      </span>
+                      <span className="text-xs text-gray-400">({member.email})</span>
+                    </label>
+                  ))
+                )}
+              </div>
+              {newTask.assigned_to.length > 0 && (
+                <p className="text-xs text-green-600 mt-1">
+                  {newTask.assigned_to.length} membre(s) sélectionné(s)
+                </p>
+              )}
             </div>
             <Button onClick={handleAddTask} className="w-full rounded-xl bg-[#4CAF50] hover:bg-[#2E7D32]">
               Créer la tâche
