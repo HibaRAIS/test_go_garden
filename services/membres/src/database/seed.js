@@ -19,6 +19,13 @@ async function seed() {
       firstName: 'Membre',
       lastName: 'Test',
       isAdmin: false
+    },
+    {
+      email: 'membre2@cogarden.com',
+      password: 'membre1234',
+      firstName: 'Membre',
+      lastName: 'Test2',
+      isAdmin: false
     }
   ];
 

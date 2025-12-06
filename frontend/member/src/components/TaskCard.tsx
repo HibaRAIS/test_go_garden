@@ -5,6 +5,8 @@ import { Badge } from './ui/badge';
 interface TaskCardProps {
   task: Task;
   onStatusChange?: (taskId: string, newStatus: Task['status']) => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (taskId: string) => void;
 }
 
 const taskIcons = {
@@ -44,7 +46,7 @@ const statusLabels = {
   completed: 'Terminée',
 };
 
-export function TaskCard({ task, onStatusChange }: TaskCardProps) {
+export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardProps) {
   const Icon = taskIcons[task.type];
   const typeColor = taskTypeColors[task.type] || taskTypeColors.other;
   
@@ -89,6 +91,27 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
         >
           {task.status === 'pending' ? 'Commencer' : 'Terminer'}
         </button>
+      )}
+
+      {(onEdit || onDelete) && (
+        <div className="flex gap-2 mt-2">
+          {onEdit && (
+            <button
+              onClick={() => onEdit(task)}
+              className="flex-1 py-2 px-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              Modifier
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(task.id)}
+              className="flex-1 py-2 px-3 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 transition-colors"
+            >
+              Supprimer
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

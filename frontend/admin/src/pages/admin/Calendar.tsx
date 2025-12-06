@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { tasksApi, Task } from "../../services/tasksApi";
 import { Button } from "../../components/ui/button";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -24,15 +25,17 @@ export function Calendar() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadTasks();
-  }, []);
+  }, [user]);
 
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const data = await tasksApi.getAll();
+      const assignedTo = user?.role === "membre" ? String(user.id) : undefined;
+      const data = await tasksApi.getAll(assignedTo);
       setTasks(data);
     } catch (err) {
       console.error("Failed to load tasks", err);

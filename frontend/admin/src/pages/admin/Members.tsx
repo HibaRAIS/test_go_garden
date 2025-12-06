@@ -257,7 +257,7 @@ export function Members() {
       {filteredMembers.length > 0 ? (
         <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full border-separate border-spacing-y-3 border-spacing-x-0">
               <thead className="bg-gray-50 border-b border-gray-200 ">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
@@ -277,10 +277,13 @@ export function Members() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {filteredMembers.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-6">
+                  <tr
+                    key={member.id}
+                    className="bg-white hover:bg-gray-50 shadow-sm border border-gray-100"
+                  >
+                    <td className="px-6 py-6 align-top rounded-l-xl">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-[#4CAF50] to-[#81C784] rounded-full flex items-center justify-center flex-shrink-0">
                           <User size={20} className="text-white" />
@@ -292,7 +295,7 @@ export function Members() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-6">
+                    <td className="px-6 py-6 align-top">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Mail size={14} className="text-gray-400" />
@@ -306,20 +309,20 @@ export function Members() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-6 text-sm text-gray-600 max-w-[200px]">
+                    <td className="px-6 py-6 text-sm text-gray-600 max-w-[200px] align-top">
                       {member.skills || (
                         <span className="text-gray-400 italic">
                           Aucune compétence
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-6 text-sm text-gray-600">
+                    <td className="px-6 py-6 text-sm text-gray-600 align-top">
                       <div className="flex items-center gap-2">
                         <Calendar size={14} className="text-gray-400" />
                         {new Date(member.join_date).toLocaleDateString("fr-FR")}
                       </div>
                     </td>
-                    <td className="px-6 py-6">
+                    <td className="px-6 py-6 align-top rounded-r-xl">
                       <div className="flex items-center gap-3">
                         <Button
                           variant="outline"

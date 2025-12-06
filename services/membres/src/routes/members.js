@@ -31,7 +31,8 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      'SELECT id, name, email, created_at FROM users WHERE id = $1',
+      `SELECT id, CONCAT(first_name, ' ', last_name) AS name, email, is_admin, phone, skills, created_at
+       FROM members WHERE id = $1`,
       [id]
     );
 
@@ -75,7 +76,16 @@ router.get('/', async (req, res) => {
     if (!ids) {
       // Si pas d'IDs, retourner uniquement les membres (pas les admins)
       const result = await pool.query(
-        'SELECT id, name, email, is_admin, phone, skills, created_at FROM users WHERE is_admin = false ORDER BY created_at DESC'
+        `SELECT id,
+                CONCAT(first_name, ' ', last_name) AS name,
+                email,
+                is_admin,
+                phone,
+                skills,
+                created_at
+         FROM members
+         WHERE is_admin = false
+         ORDER BY created_at DESC`
       );
       return res.json(result.rows);
     }
@@ -84,7 +94,15 @@ router.get('/', async (req, res) => {
     const idArray = ids.split(',').map(id => id.trim());
 
     const result = await pool.query(
-      'SELECT id, name, email, is_admin, phone, skills, created_at FROM users WHERE id = ANY($1)',
+      `SELECT id,
+              CONCAT(first_name, ' ', last_name) AS name,
+              email,
+              is_admin,
+              phone,
+              skills,
+              created_at
+       FROM members
+       WHERE id = ANY($1)`,
       [idArray]
     );
 
@@ -135,28 +153,16 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { first_name, last_name, email, phone, skills } = req.body;
 
-    // Construire le nom complet si first_name ou last_name est fourni
-    let name = null;
-    if (first_name || last_name) {
-      const existingUser = await pool.query('SELECT name FROM users WHERE id = $1', [id]);
-      if (existingUser.rows.length > 0) {
-        const currentName = existingUser.rows[0].name || '';
-        const currentParts = currentName.split(' ');
-        const currentFirst = currentParts[0] || '';
-        const currentLast = currentParts.slice(1).join(' ') || '';
-        name = `${first_name || currentFirst} ${last_name || currentLast}`.trim();
-      }
-    }
-
     const result = await pool.query(
-      `UPDATE users 
-       SET name = COALESCE($1, name),
-           email = COALESCE($2, email),
-           phone = COALESCE($3, phone),
-           skills = COALESCE($4, skills)
-       WHERE id = $5
-       RETURNING id, name, email, is_admin, phone, skills, created_at`,
-      [name, email, phone, skills, id]
+      `UPDATE members 
+       SET first_name = COALESCE($1, first_name),
+           last_name = COALESCE($2, last_name),
+           email = COALESCE($3, email),
+           phone = COALESCE($4, phone),
+           skills = COALESCE($5, skills)
+       WHERE id = $6
+       RETURNING id, CONCAT(first_name, ' ', last_name) AS name, email, is_admin, phone, skills, created_at`,
+      [first_name, last_name, email, phone, skills, id]
     );
 
     if (result.rows.length === 0) {

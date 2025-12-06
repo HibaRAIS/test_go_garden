@@ -55,11 +55,14 @@ router.get('/', async (req, res) => {
     const { assigned_to, plot_id, plant_id } = req.query;
 
     if (assigned_to) {
-      // Filtrer par membre assigné
+      // Filtrer par membre assigné et renvoyer les assignations
       const result = await pool.query(
-        `SELECT t.* FROM tasks t
+        `SELECT t.*, COALESCE(json_agg(json_build_object('member_id', ta.member_id))
+            FILTER (WHERE ta.member_id IS NOT NULL), '[]') AS assignments
+         FROM tasks t
          INNER JOIN task_assignments ta ON t.id = ta.task_id
          WHERE ta.member_id = $1
+         GROUP BY t.id
          ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC`,
         [assigned_to]
       );
@@ -69,7 +72,13 @@ router.get('/', async (req, res) => {
     if (plot_id) {
       // Filtrer par parcelle
       const result = await pool.query(
-        'SELECT * FROM tasks WHERE plot_id = $1 ORDER BY due_date ASC NULLS LAST, created_at DESC',
+        `SELECT t.*, COALESCE(json_agg(json_build_object('member_id', ta.member_id))
+            FILTER (WHERE ta.member_id IS NOT NULL), '[]') AS assignments
+         FROM tasks t
+         LEFT JOIN task_assignments ta ON t.id = ta.task_id
+         WHERE t.plot_id = $1
+         GROUP BY t.id
+         ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC`,
         [plot_id]
       );
       return res.json(result.rows);
@@ -78,7 +87,13 @@ router.get('/', async (req, res) => {
     if (plant_id) {
       // Filtrer par plante
       const result = await pool.query(
-        'SELECT * FROM tasks WHERE plant_id = $1 ORDER BY due_date ASC NULLS LAST, created_at DESC',
+        `SELECT t.*, COALESCE(json_agg(json_build_object('member_id', ta.member_id))
+            FILTER (WHERE ta.member_id IS NOT NULL), '[]') AS assignments
+         FROM tasks t
+         LEFT JOIN task_assignments ta ON t.id = ta.task_id
+         WHERE t.plant_id = $1
+         GROUP BY t.id
+         ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC`,
         [plant_id]
       );
       return res.json(result.rows);
@@ -86,7 +101,12 @@ router.get('/', async (req, res) => {
 
     // Toutes les tâches
     const result = await pool.query(
-      'SELECT * FROM tasks ORDER BY due_date ASC NULLS LAST, created_at DESC'
+      `SELECT t.*, COALESCE(json_agg(json_build_object('member_id', ta.member_id))
+          FILTER (WHERE ta.member_id IS NOT NULL), '[]') AS assignments
+       FROM tasks t
+       LEFT JOIN task_assignments ta ON t.id = ta.task_id
+       GROUP BY t.id
+       ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC`
     );
     res.json(result.rows);
   } catch (error) {

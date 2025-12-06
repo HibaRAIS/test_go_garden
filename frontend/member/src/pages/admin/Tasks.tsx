@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Filter, Droplet, Scissors, ShoppingBasket, Sprout, MoreHorizontal } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, Search } from "lucide-react";
 import { TaskCard } from "../../components/TaskCard";
 import { tasksApi, Task } from "../../services/tasksApi";
 import { apiService } from "../../services/membreApi";
@@ -12,19 +12,8 @@ import {
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface Member {
   id: string;
@@ -39,21 +28,26 @@ export function Tasks() {
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [newTask, setNewTask] = useState({ 
-    title: "", 
-    description: "", 
-    due_date: "", 
-    type: "other", 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [newTask, setNewTask] = useState({
+    title: "",
+    description: "",
+    due_date: new Date().toISOString().split("T")[0],
+    type: "other",
     status: "pending",
-    assigned_to: [] as string[]
+    assigned_to: [] as string[],
   });
+  const { user } = useAuth();
 
   useEffect(() => {
     loadTasks();
-    loadMembers();
-  }, []);
+    if (user?.role === "admin") {
+      loadMembers();
+    }
+  }, [user]);
 
   const loadMembers = async () => {
+    if (user?.role !== "admin") return;
     try {
       const data = await apiService.getAllMembers();
       setMembers(data.members || []);
@@ -65,7 +59,8 @@ export function Tasks() {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const data = await tasksApi.getAll();
+      const assignedTo = user?.role === "membre" ? String(user.id) : undefined;
+      const data = await tasksApi.getAll(assignedTo);
       setTasks(data);
     } catch (err) {
       console.error("Failed to load tasks", err);
@@ -75,20 +70,21 @@ export function Tasks() {
   };
 
   const handleAddTask = async () => {
+    if (user?.role !== "admin") return;
     try {
       const created = await tasksApi.create({
         ...newTask,
-        assigned_to: newTask.assigned_to
+        assigned_to: newTask.assigned_to,
       });
       setTasks([...tasks, created]);
       setIsAddOpen(false);
-      setNewTask({ 
-        title: "", 
-        description: "", 
-        due_date: "", 
-        type: "other", 
+      setNewTask({
+        title: "",
+        description: "",
+        due_date: new Date().toISOString().split("T")[0],
+        type: "other",
         status: "pending",
-        assigned_to: []
+        assigned_to: [],
       });
     } catch (err) {
       console.error("Failed to create task", err);
@@ -96,15 +92,18 @@ export function Tasks() {
   };
 
   const toggleMemberSelection = (memberId: string) => {
-    setNewTask(prev => ({
+    setNewTask((prev) => ({
       ...prev,
       assigned_to: prev.assigned_to.includes(memberId)
-        ? prev.assigned_to.filter(id => id !== memberId)
-        : [...prev.assigned_to, memberId]
+        ? prev.assigned_to.filter((id) => id !== memberId)
+        : [...prev.assigned_to, memberId],
     }));
   };
 
-  const handleStatusChange = async (taskId: string, newStatus: Task["status"]) => {
+  const handleStatusChange = async (
+    taskId: string,
+    newStatus: Task["status"]
+  ) => {
     setTasks(
       tasks.map((task) =>
         task.id === taskId ? { ...task, status: newStatus } : task
@@ -119,8 +118,17 @@ export function Tasks() {
   };
 
   const filterTasks = (status?: Task["status"]) => {
-    if (!status) return tasks;
-    return tasks.filter((task) => task.status === status);
+    const normalizedTerm = searchTerm.trim().toLowerCase();
+    const baseList = normalizedTerm
+      ? tasks.filter(
+          (task) =>
+            task.title.toLowerCase().includes(normalizedTerm) ||
+            (task.description || "").toLowerCase().includes(normalizedTerm)
+        )
+      : tasks;
+
+    if (!status) return baseList;
+    return baseList.filter((task) => task.status === status);
   };
 
   const allTasks = tasks;
@@ -132,6 +140,8 @@ export function Tasks() {
     return <div className="p-8 text-center">Chargement des tâches...</div>;
   }
 
+  const showCreateButton = user?.role === "admin";
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -140,10 +150,26 @@ export function Tasks() {
           <h1 className="text-2xl text-gray-900 mb-1">Tâches & Événements</h1>
           <p className="text-gray-600">Gérez les activités du jardin</p>
         </div>
-        <Button onClick={() => setIsAddOpen(true)} className="rounded-xl bg-[#4CAF50] hover:bg-[#2E7D32]">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvelle tâche
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto sm:items-center">
+          <div className="relative w-full sm:w-72">
+            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Rechercher..."
+              className="pl-10 pr-3 py-2 rounded-xl border-gray-200 focus:ring-2 focus:ring-[#4CAF50]/40"
+            />
+          </div>
+          {showCreateButton && (
+            <Button
+              className="rounded-xl bg-[#2E7D32] hover:bg-[#256428]"
+              onClick={() => setIsAddOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle tâche
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -212,7 +238,11 @@ export function Tasks() {
         <TabsContent value="completed" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {completedTasks.map((task) => (
-              <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onStatusChange={handleStatusChange}
+              />
             ))}
           </div>
           {completedTasks.length === 0 && (
@@ -270,88 +300,100 @@ export function Tasks() {
       </div>
 
       {/* Add Task Dialog */}
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nouvelle tâche</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Titre</Label>
-              <Input
-                value={newTask.title}
-                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                placeholder="Nom de la tâche"
-              />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Input
-                value={newTask.description}
-                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                placeholder="Description de la tâche"
-              />
-            </div>
-            <div>
-              <Label>Date d'échéance</Label>
-              <Input
-                type="date"
-                value={newTask.due_date}
-                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Type</Label>
-              <Select value={newTask.type} onValueChange={(value) => setNewTask({ ...newTask, type: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="watering">Arrosage</SelectItem>
-                  <SelectItem value="weeding">Désherbage</SelectItem>
-                  <SelectItem value="harvest">Récolte</SelectItem>
-                  <SelectItem value="planting">Plantation</SelectItem>
-                  <SelectItem value="other">Autre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Assigner à des membres</Label>
-              <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
-                {members.length === 0 ? (
-                  <p className="text-sm text-gray-500 p-2">Aucun membre disponible</p>
-                ) : (
-                  members.map((member) => (
-                    <label
-                      key={member.id}
-                      className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={newTask.assigned_to.includes(member.id)}
-                        onChange={() => toggleMemberSelection(member.id)}
-                        className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                      />
-                      <span className="text-sm text-gray-700">
-                        {member.first_name} {member.last_name}
-                      </span>
-                      <span className="text-xs text-gray-400">({member.email})</span>
-                    </label>
-                  ))
+      {showCreateButton && (
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nouvelle tâche</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Titre</Label>
+                <Input
+                  value={newTask.title}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, title: e.target.value })
+                  }
+                  placeholder="Nom de la tâche"
+                />
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Input
+                  value={newTask.description}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, description: e.target.value })
+                  }
+                  placeholder="Description de la tâche"
+                />
+              </div>
+              <div>
+                <Label>Date d'échéance</Label>
+                <Input
+                  type="date"
+                  value={newTask.due_date}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, due_date: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Type</Label>
+                <select
+                  className="w-full rounded-md border border-gray-300 p-2"
+                  value={newTask.type}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, type: e.target.value })
+                  }
+                >
+                  <option value="watering">Arrosage</option>
+                  <option value="weeding">Désherbage</option>
+                  <option value="harvest">Récolte</option>
+                  <option value="planting">Plantation</option>
+                  <option value="other">Autre</option>
+                </select>
+              </div>
+              <div>
+                <Label>Assigner à des membres</Label>
+                <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                  {members.length === 0 ? (
+                    <p className="text-sm text-gray-500 p-2">Aucun membre disponible</p>
+                  ) : (
+                    members.map((member) => (
+                      <label
+                        key={member.id}
+                        className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={newTask.assigned_to.includes(member.id)}
+                          onChange={() => toggleMemberSelection(member.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                        <span className="text-sm text-gray-700">
+                          {member.first_name} {member.last_name}
+                        </span>
+                        <span className="text-xs text-gray-400">({member.email})</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                {newTask.assigned_to.length > 0 && (
+                  <p className="text-xs text-green-600 mt-1">
+                    {newTask.assigned_to.length} membre(s) sélectionné(s)
+                  </p>
                 )}
               </div>
-              {newTask.assigned_to.length > 0 && (
-                <p className="text-xs text-green-600 mt-1">
-                  {newTask.assigned_to.length} membre(s) sélectionné(s)
-                </p>
-              )}
+              <Button
+                onClick={handleAddTask}
+                className="w-full rounded-xl bg-[#4CAF50] hover:bg-[#2E7D32]"
+              >
+                Créer la tâche
+              </Button>
             </div>
-            <Button onClick={handleAddTask} className="w-full rounded-xl bg-[#4CAF50] hover:bg-[#2E7D32]">
-              Créer la tâche
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

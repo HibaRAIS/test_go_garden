@@ -21,8 +21,12 @@ export interface Member {
 const MEMBERS_API_URL = import.meta.env.VITE_MEMBRES_API_URL || "http://localhost:8001/api";
 
 export const tasksApi = {
-  getAll: async (): Promise<Task[]> => {
-    const response = await fetch(`${API_BASE_URL}/tasks`);
+  getAll: async (assignedTo?: string): Promise<Task[]> => {
+    const url = assignedTo
+      ? `${API_BASE_URL}/tasks?assigned_to=${assignedTo}`
+      : `${API_BASE_URL}/tasks`;
+
+    const response = await fetch(url);
     if (!response.ok) throw new Error("Failed to fetch tasks");
     const data = await response.json();
     return data.map((t: any) => ({
@@ -33,7 +37,7 @@ export const tasksApi = {
       status: t.status || 'pending',
       type: t.type || 'other',
       assignedToId: t.assignments?.[0]?.member_id,
-      assignedTo: "Member", // Placeholder
+      assignedTo: t.assignments?.[0]?.member_id || "Non assignée",
     }));
   },
 

@@ -29,7 +29,7 @@ export const tasksApi = {
       status: t.status || 'pending',
       type: t.type || 'other',
       assignedToId: t.assignments?.[0]?.member_id,
-      assignedTo: "Member", // Placeholder
+      assignedTo: t.assignments?.[0]?.member_id || "Non assignée",
     }));
   },
 
