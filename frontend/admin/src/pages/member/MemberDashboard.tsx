@@ -1,84 +1,75 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-// import { Button } from "../../components/ui/button"; // Suppression : Plus besoin du composant Button
 import { useNavigate } from "react-router-dom";
-import {
-  TreePine,
-  User,
-  Sprout,
-  CheckSquare,
-  MapPin,
-  Clock,
-  MessageSquare,
-  Leaf,
-  Calendar,
-} from "lucide-react";
-
-// Les données menuItems ne sont plus utilisées dans le JSX, mais on les garde pour référence.
-const menuItems = [
-  {
-    title: "Mes Tâches",
-    description: "Voir et compléter mes tâches d'entretien.",
-    icon: CheckSquare,
-    path: "/member/tasks",
-    color: "text-orange-600",
-  },
-  {
-    title: "Mes Parcelles",
-    description: "Gérer mes parcelles attribuées et leur état.",
-    icon: TreePine,
-    path: "/member/plots",
-    color: "text-emerald-600",
-  },
-  {
-    title: "Catalogue",
-    description: "Explorer les plantes et poster des commentaires.",
-    icon: Sprout,
-    path: "/member/gallery",
-    color: "text-green-600",
-  },
-  {
-    title: "Mon Profil",
-    description: "Modifier mes infos personnelles et compétences.",
-    icon: User,
-    path: "/member/profile",
-    color: "text-blue-600",
-  },
-];
-
-// Données d'activité simulées
-const recentActivities = [
-  {
-    title: "Arrosage parcelle B2",
-    date: "Aujourd'hui, 14:00",
-    status: "Terminé",
-    type: "Tâche",
-    color: "text-green-600",
-  },
-  {
-    title: "Récolte tomates",
-    date: "Demain, 10:00",
-    status: "Planifié",
-    type: "Tâche",
-    color: "text-orange-600",
-  },
-  {
-    title: "Avis sur les salades",
-    date: "Hier, 16:00",
-    status: "Nouveau",
-    type: "Commentaire",
-    color: "text-blue-600",
-  },
-];
+import { CheckSquare, MapPin, Clock, MessageSquare, Leaf } from "lucide-react";
+import { tasksApi } from "../../services/tasksApi";
+import { plotService } from "../../services/plotService";
 
 export function MemberDashboard() {
-  const { user, logout } = useAuth(); // 'logout' n'est plus utilisé mais conservé par sécurité
+  const { user } = useAuth();
   const navigate = useNavigate();
+  
+  const [stats, setStats] = useState({
+    plotsCount: 0,
+    pendingTasks: 0,
+    upcomingTasks: 0,
+    commentsCount: 0 
+  });
+  
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // La fonction de déconnexion est conservée au cas où elle est appelée ailleurs
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        
+        // Fetch plots for this member
+        const plots = await plotService.getAll();
+        
+        // Fetch tasks for this member
+        const tasks = await tasksApi.getAll(user.id.toString());
+        
+        // Calculate stats
+        const pending = tasks.filter(t => t.status === 'pending' || t.status === 'in-progress').length;
+        const upcoming = tasks.filter(t => t.status !== 'completed').length;
+        
+        setStats({
+          plotsCount: plots.length,
+          pendingTasks: pending,
+          upcomingTasks: upcoming,
+          commentsCount: 0 // Placeholder
+        });
+        
+        // Format recent activities from tasks
+        const activities = tasks
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .slice(0, 5)
+          .map(task => ({
+            title: task.title,
+            date: new Date(task.date).toLocaleDateString(),
+            status: task.status,
+            type: "Tâche",
+            color: task.status === 'completed' ? "text-green-600" : "text-orange-600"
+          }));
+          
+        setRecentActivities(activities);
+        
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  if (loading) {
+    return <div className="p-8 text-center">Chargement...</div>;
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -87,7 +78,7 @@ export function MemberDashboard() {
         <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border border-gray-100">
           <div className="flex flex-col">
             <h1 className="text-4xl font-extrabold text-gray-900 mb-1">
-              Bienvenue dans votre jardin
+              Bienvenue dans votre jardin, {user?.first_name}
             </h1>
             <p className="text-xl font-medium text-gray-600">
               Gérez vos parcelles et participez à la communauté.
@@ -103,7 +94,7 @@ export function MemberDashboard() {
         <div className="mt-8 pt-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
           <CardStat
             title="Parcelles Attribuées"
-            value="2"
+            value={stats.plotsCount.toString()}
             icon={MapPin}
             color="text-emerald-600"
           />
@@ -115,20 +106,17 @@ export function MemberDashboard() {
           />
           <CardStat
             title="Tâches à Faire"
-            value="1"
+            value={stats.pendingTasks.toString()}
             icon={CheckSquare}
             color="text-orange-600"
           />
           <CardStat
             title="Total Commentaires"
-            value="12"
+            value={stats.commentsCount.toString()}
             icon={MessageSquare}
             color="text-blue-600"
           />
         </div>
-
-        {/* NAVIGATION GRID (SUPPRIMÉ) */}
-        {/* L'ancienne grille de navigation a été retirée ici. */}
 
         {/* ACTIVITÉS RÉCENTES AGRÉGÉES (Fil d'activité) */}
         <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
@@ -137,25 +125,29 @@ export function MemberDashboard() {
             Tâches et Actions Récentes
           </h3>
           <div className="space-y-3">
-            {recentActivities.map((activity, index) => (
-              <div
-                key={index}
-                className={`flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-gray-50 transition-colors`}
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{activity.title}</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {activity.date} - {activity.type}
-                  </p>
-                </div>
-                {/* L'utilisation de `border-current` garantit que la bordure prend la couleur du texte */}
-                <span
-                  className={`px-3 py-1 text-sm font-semibold rounded-full ${activity.color} bg-opacity-10 border border-current`}
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-gray-50 transition-colors`}
                 >
-                  {activity.status}
-                </span>
-              </div>
-            ))}
+                  <div>
+                    <p className="font-medium text-gray-900">{activity.title}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {activity.date} - {activity.type}
+                    </p>
+                  </div>
+                  <span
+                    className={`px-3 py-1 text-sm font-semibold rounded-full ${activity.color} bg-opacity-10 border border-current`}
+                  >
+                    {activity.status}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-4">Aucune activité récente.</p>
+            )}
+            
             <button
               onClick={() => navigate("/member/tasks")}
               className="w-full text-center text-sm font-medium text-[#2E7D32] hover:text-[#4CAF50] transition-colors pt-2"

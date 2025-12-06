@@ -84,15 +84,15 @@ export function MemberDashboard() {
     <div className="p-4 sm:p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* HEADER & BIENVENUE SIMPLIFIÉ */}
-        <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border border-gray-100">
+        <div className="bg-gradient-to-br from-[#4CAF50] to-[#81C784] rounded-2xl p-6 md:p-8 text-white shadow-xl">
           <div className="flex flex-col">
-            <h1 className="text-4xl font-extrabold text-gray-900 mb-1">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-1">
               Bienvenue dans votre jardin, {user?.first_name}
             </h1>
-            <p className="text-xl font-medium text-gray-600">
+            <p className="text-lg md:text-xl font-medium text-white/90">
               Gérez vos parcelles et participez à la communauté.
             </p>
-            <span className="inline-flex items-center mt-3 px-3 py-1 bg-[#F1FFF0] text-[#2E7D32] rounded-full text-sm font-semibold">
+            <span className="inline-flex items-center mt-3 px-3 py-1 bg-white/15 text-white rounded-full text-sm font-semibold border border-white/30">
               <Leaf className="h-4 w-4 mr-1" />
               Connecté en tant que Membre
             </span>

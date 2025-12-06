@@ -41,7 +41,7 @@ export function Dashboard() {
         ]);
         
         // Calculate stats
-        const occupied = plots.filter((p: any) => p.status === "occupied" || p.member_id).length;
+        const occupied = plots.filter((p: any) => p.status === "occupied").length;
         const pending = tasks.filter((t: any) => t.status === "pending" || t.status === "in-progress").length;
         const tracked = plots.filter((p: any) => p.current_plant_id).length;
         
@@ -154,8 +154,8 @@ export function Dashboard() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-gray-900 mb-1">Mes parcelles</h3>
-              <p className="text-xs text-gray-600">Voir mes parcelles</p>
+              <h3 className="text-gray-900 mb-1">Gérer les parcelles</h3>
+              <p className="text-xs text-gray-600">Voir toutes les parcelles</p>
             </div>
             <MapPin className="h-8 w-8 text-[#4CAF50] group-hover:scale-110 transition-transform" />
           </div>
@@ -175,13 +175,13 @@ export function Dashboard() {
         </Link>
 
         <Link
-          to="/member/calendar"
+          to="/member/gallery"
           className="bg-white rounded-xl p-6 border border-[#E0E0E0] hover:shadow-lg transition-all group"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-gray-900 mb-1">Calendrier</h3>
-              <p className="text-xs text-gray-600">Voir mes événements</p>
+              <h3 className="text-gray-900 mb-1">Galerie photos</h3>
+              <p className="text-xs text-gray-600">Voir les dernières photos</p>
             </div>
             <CalendarIcon className="h-8 w-8 text-[#4CAF50] group-hover:scale-110 transition-transform" />
           </div>
